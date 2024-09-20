@@ -1,3 +1,7 @@
+const std = @import("std");
+const vga = @import("vga.zig");
+const cpuid = @import("cpuid.zig");
+
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
 const ALIGN = 1 << 0;
 const MEMINFO = 1 << 1;
@@ -31,15 +35,18 @@ export fn _start() callconv(.Naked) noreturn {
 }
 
 export fn main() void {
-    const vga_buffer: [*]u16 = @ptrFromInt(0xB8000);
-
-    // Clear screen
-    for (0..80 * 25) |i| {
-        vga_buffer[i] = 0x0F << 8 | ' ';
-    }
+    vga.clear();
 
     for ("Is this thing on?", 0..) |byte, i| {
-        vga_buffer[i] = 0xF0 << 8 | @as(u16, byte);
+        vga.put(i, 0, byte, vga.Colour.Green, vga.Colour.Black);
+    }
+
+    for (cpuid.manufacturerId(), 0..) |byte, i| {
+        vga.put(i, 1, byte, vga.Colour.Green, vga.Colour.Black);
+    }
+
+    inline for (std.meta.fields(vga.Colour), 0..) |colour, i| {
+        vga.put(i, 2, i + 65, @enumFromInt(colour.value), vga.Colour.Black);
     }
 
     while (true) {}
